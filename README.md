@@ -18,7 +18,7 @@
 
 ## 👥 Team
 
-**Team Name:** `[TEAM NAME]`
+**Team Name:** `Belmont`
 
 | Member     | Role      | Institution |
 | ---------- | --------- | ----------- |
