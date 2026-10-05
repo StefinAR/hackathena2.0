@@ -1,0 +1,280 @@
+.history-page {
+  width: 100%;
+  padding: 24px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.history-header h2 {
+  margin-bottom: 8px;
+  font-size: 30px;
+}
+
+.history-header p {
+  color: #94a3b8;
+}
+
+.history-count {
+  padding: 8px 12px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+
+/* Summary */
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.history-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.summary-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+}
+
+.history-summary-card.normal .summary-icon {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.history-summary-card.suspicious .summary-icon {
+  background: #451a03;
+  color: #fbbf24;
+}
+
+.history-summary-card.malicious .summary-icon {
+  background: #450a0a;
+  color: #f87171;
+}
+
+.history-summary-card div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.history-summary-card span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.history-summary-card strong {
+  font-size: 22px;
+}
+
+
+/* History table */
+
+.history-card {
+  width: 100%;
+  padding: 22px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.history-card-header {
+  margin-bottom: 18px;
+}
+
+.history-card-header h3 {
+  margin-bottom: 5px;
+  font-size: 17px;
+}
+
+.history-card-header p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.history-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  min-width: 750px;
+  border-collapse: collapse;
+}
+
+.history-table th {
+  padding: 12px;
+  text-align: left;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid #1f2937;
+}
+
+.history-table td {
+  padding: 15px 12px;
+  color: #cbd5e1;
+  font-size: 13px;
+  border-bottom: 1px solid #1f2937;
+}
+
+.history-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.protocol {
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+
+/* Status */
+
+.history-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.history-status.normal {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.history-status.suspicious {
+  background: #451a03;
+  color: #fbbf24;
+}
+
+.history-status.malicious {
+  background: #450a0a;
+  color: #f87171;
+}
+
+
+/* History filters */
+
+.history-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.history-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-filters input,
+.history-filters select {
+  height: 36px;
+  padding: 0 11px;
+
+  border: 1px solid #1f2937;
+  border-radius: 7px;
+
+  outline: none;
+
+  background: #0f172a;
+  color: #cbd5e1;
+
+  font-size: 12px;
+}
+
+.history-filters input {
+  width: 180px;
+}
+
+.history-filters input::placeholder {
+  color: #64748b;
+}
+
+.history-filters input:focus,
+.history-filters select:focus {
+  border-color: #2563eb;
+}
+
+.no-results {
+  padding: 35px !important;
+  text-align: center;
+  color: #64748b !important;
+}
+.clear-filters {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #1f2937;
+  border-radius: 7px;
+  background: #111827;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.clear-filters:hover {
+  border-color: #2563eb;
+  color: #e2e8f0;
+}
+
+
+/* Responsive */
+
+@media (max-width: 700px) {
+
+  .history-page {
+    padding: 20px;
+  }
+
+  .history-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .history-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .history-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-filters {
+    width: 100%;
+  }
+
+  .history-filters input {
+    flex: 1;
+    width: auto;
+  }
+
+  .history-filters select {
+    flex-shrink: 0;
+  }
+}
