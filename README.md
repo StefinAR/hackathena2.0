@@ -22,10 +22,10 @@
 
 | Member     | Role      | Institution |
 | ---------- | --------- | ----------- |
-| **[Name]** | Team Lead | [College]   |
-| **[Name]** | [Role]    | [College]   |
-| **[Name]** | [Role]    | [College]   |
-| **[Name]** | [Role]    | [College]   |
+| STEFIN A R | Team Lead | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
+| JEWEL ABRAHAM BIJU | Member | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
+| AADI ROBIN JOSEPH  | Member    | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
+| LEWIN JOSHY | Member    | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
 
 ---
 
