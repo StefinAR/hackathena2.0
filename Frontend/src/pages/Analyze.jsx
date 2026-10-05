@@ -6,6 +6,7 @@ import {
   FileText,
   ShieldCheck,
   X,
+  Activity
 } from "lucide-react";
 
 import "../styles/Analyze.css";
@@ -17,6 +18,9 @@ function Analyze() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
 
+  const [domain, setDomain] = useState("");
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
+  const [domainResult, setDomainResult] = useState(null);
   const allowedExtensions = [
   ".pcap",
   ".pcapng",
@@ -65,7 +69,34 @@ const isValidFileType = (file) => {
     setResult(null);
     setIsAnalyzing(false);
   };
+  const handleDomainCheck = () => {
+  if (!domain.trim() || isCheckingDomain) return;
 
+  const cleanDomain = domain
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
+
+  setIsCheckingDomain(true);
+  setDomainResult(null);
+
+  // Frontend-only simulation.
+  // Later this can be replaced with a backend ping/API.
+  setTimeout(() => {
+    const ping = Math.floor(Math.random() * 160) + 20;
+
+    const isHigh = ping >= 100;
+
+    setDomainResult({
+      domain: cleanDomain,
+      ping,
+      traffic: isHigh ? "HIGH" : "NORMAL",
+      status: isHigh ? "Suspicious" : "Normal",
+    });
+
+    setIsCheckingDomain(false);
+  }, 1200);
+};
   const handleAnalyze = () => {
     if (!selectedFile || isAnalyzing) return;
 
@@ -203,7 +234,85 @@ const isValidFileType = (file) => {
             ? "Analyzing..."
             : "Analyze Traffic"}
         </button>
+<div className="domain-check-card">
 
+  <div className="domain-check-header">
+    <div>
+      <h3>Domain Traffic Check</h3>
+
+      <p>
+        Check a domain and estimate its network traffic level.
+      </p>
+    </div>
+
+    <div className="domain-check-icon">
+      <Activity size={22} />
+    </div>
+  </div>
+
+  <div className="domain-check-form">
+
+    <input
+      type="text"
+      placeholder="Enter domain name..."
+      value={domain}
+      onChange={(event) => setDomain(event.target.value)}
+    />
+
+    <button
+      type="button"
+      onClick={handleDomainCheck}
+      disabled={!domain.trim() || isCheckingDomain}
+    >
+      {isCheckingDomain ? "Checking..." : "Check Domain"}
+    </button>
+
+  </div>
+
+  {domainResult && (
+    <div
+      className={`domain-result ${
+        domainResult.status.toLowerCase()
+      }`}
+    >
+
+      <div className="domain-result-header">
+        <strong>{domainResult.domain}</strong>
+
+        <span>
+          {domainResult.status}
+        </span>
+      </div>
+
+      <div className="domain-result-details">
+
+        <div>
+          <span>Ping</span>
+          <strong>{domainResult.ping} ms</strong>
+        </div>
+
+        <div>
+          <span>Traffic Level</span>
+          <strong>{domainResult.traffic}</strong>
+        </div>
+
+        <div>
+          <span>Classification</span>
+          <strong>{domainResult.status}</strong>
+        </div>
+
+      </div>
+
+      <p className="domain-result-note">
+        This is an approximate classification based on network
+        response measurements. Ping alone cannot accurately
+        determine whether traffic is malicious.
+      </p>
+
+    </div>
+  )}
+
+</div>
       </div>
 
       <div className="result-card">
