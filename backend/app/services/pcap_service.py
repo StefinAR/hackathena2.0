@@ -1,27 +1,57 @@
+# backend/app/services/pcap_service.py
+
 from pathlib import Path
-import uuid
+from fastapi import UploadFile
+
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
+
+# Create uploads directory automatically
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-UPLOAD_DIR = Path("data/uploads")
-UPLOAD_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
+async def save_pcap(file: UploadFile) -> Path:
+    """
+    Save an uploaded PCAP file to the backend/uploads directory.
+    """
+
+    if not file.filename:
+        raise ValueError("No filename provided.")
+
+    filename = Path(file.filename).name
+
+    if not filename.lower().endswith((".pcap", ".pcapng", ".cap")):
+        raise ValueError("Only PCAP/PCAPNG files are allowed.")
+
+    destination = UPLOAD_DIR / filename
+
+    # Avoid accidentally overwriting another upload
+    counter = 1
+
+    while destination.exists():
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix
+
+        destination = UPLOAD_DIR / f"{stem}_{counter}{suffix}"
+        counter += 1
+
+    with destination.open("wb") as buffer:
+        while True:
+            chunk = await file.read(1024 * 1024)
+
+            if not chunk:
+                break
+
+            buffer.write(chunk)
+
+    await file.close()
+
+    return destination
 
 
-def save_pcap(filename: str, content: bytes):
+def delete_pcap(file_path: Path) -> None:
+    """
+    Delete a temporary PCAP after analysis.
+    """
 
-    extension = Path(filename).suffix.lower()
-
-    if extension not in [".pcap", ".pcapng"]:
-        raise ValueError(
-            "Only .pcap and .pcapng files are supported"
-        )
-
-    new_filename = f"{uuid.uuid4()}{extension}"
-
-    file_path = UPLOAD_DIR / new_filename
-
-    file_path.write_bytes(content)
-
-    return file_path
+    if file_path.exists():
+        file_path.unlink()

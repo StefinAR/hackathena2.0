@@ -1,27 +1,52 @@
+# backend/app/main.py
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.database.database import Base, engine
-from app.database import models
 from app.routes.analysis import router as analysis_router
-from app.routes.health import router as health_router
-from app.routes.history import router as history_router
 
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="NetShield API",
-    description="DoS Detection and Network Security Backend",
-    version="1.0.0"
+    description="DDoS detection backend using LUCID",
+    version="1.0.0",
 )
 
+
+# -------------------------------------------------------------------
+# CORS
+# -------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+
+    # React development server
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# -------------------------------------------------------------------
+# Routes
+# -------------------------------------------------------------------
+
 app.include_router(analysis_router)
-app.include_router(health_router)
-app.include_router(history_router)
+
+
+# -------------------------------------------------------------------
+# Basic health check
+# -------------------------------------------------------------------
 
 @app.get("/")
 def root():
     return {
-        "message": "NetShield Backend is running"
+        "message": "NetShield API is running"
     }
 
 

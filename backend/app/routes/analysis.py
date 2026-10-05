@@ -1,11 +1,13 @@
+# backend/app/routes/analysis.py
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from app.services.pcap_service import save_pcap
-from app.services.tshark_service import extract_packets
+from app.services.analysis_service import analyze_pcap
+
 
 router = APIRouter(
-    prefix="/analysis",
-    tags=["Analysis"]
+    prefix="/api/analysis",
+    tags=["Analysis"],
 )
 
 
@@ -13,33 +15,54 @@ router = APIRouter(
 async def upload_pcap(
     file: UploadFile = File(...)
 ):
+    """
+    Upload a PCAP file and analyze it using LUCID.
+    """
+
     if not file.filename:
         raise HTTPException(
             status_code=400,
-            detail="No file provided"
+            detail="No file selected."
+        )
+
+    if not file.filename.lower().endswith(
+        (".pcap", ".pcapng", ".cap")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PCAP, PCAPNG, and CAP files are allowed."
         )
 
     try:
-        # 1. Read the uploaded PCAP
-        content = await file.read()
 
-        # 2. Save the PCAP
-        pcap_path = save_pcap(
-            filename=file.filename,
-            content=content
-        )
+        result = await analyze_pcap(file)
 
-        # 3. Give the saved PCAP path to TShark
-        packets = extract_packets(pcap_path)
+        return result
 
-        return {
-            "message": "PCAP analyzed successfully",
-            "saved_path": str(pcap_path),
-            "packet_count": len(packets)
-        }
+    except ValueError as exc:
 
-    except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail=str(e)
+            detail=str(exc)
+        )
+
+    except FileNotFoundError as exc:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc)
+        )
+
+    except RuntimeError as exc:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc)
+        )
+
+    except Exception as exc:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(exc)}"
         )
