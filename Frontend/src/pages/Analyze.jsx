@@ -1,78 +1,292 @@
 import { useState } from "react";
+import { useDetections } from "../context/useDetection";
 
-import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
-import FileUpload from "../components/FileUpload";
-import AnalysisStatus from "../components/AnalysisStatus";
-import ResultCard from "../components/ResultCard";
+import {
+  Upload,
+  FileText,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+
+import "../styles/Analyze.css";
 
 function Analyze() {
+  const { addDetection } = useDetections();
+
   const [selectedFile, setSelectedFile] = useState(null);
-  const [status, setStatus] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState(null);
 
-  const handleStartAnalysis = () => {
-    if (!selectedFile) {
-      return;
-    }
+  const allowedExtensions = [
+  ".pcap",
+  ".pcapng",
+  ".csv",
+  ".json",
+];
 
-    setStatus("analyzing");
+const isValidFileType = (file) => {
+  const fileName = file.name.toLowerCase();
 
-    // Temporary UI test.
-    // Backend connection will be added later.
+  return allowedExtensions.some((extension) =>
+    fileName.endsWith(extension)
+  );
+};
+
+  const handleFileChange = (event) => {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  if (!isValidFileType(file)) {
+    setSelectedFile(null);
+    setIsAnalyzing(false);
+
+    setResult({
+      status: "Invalid File",
+      type: "Invalid",
+      message:
+        "Unsupported file type. Please select a PCAP, PCAPNG, CSV, or JSON file.",
+      source: "-",
+      destination: "-",
+      protocol: "-",
+    });
+
+    return;
+  }
+
+  setSelectedFile(file);
+  setResult(null);
+  setIsAnalyzing(false);
+};
+
+   
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setResult(null);
+    setIsAnalyzing(false);
+  };
+
+  const handleAnalyze = () => {
+    if (!selectedFile || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+    setResult(null);
+
+    // Temporary frontend simulation.
+    // Backend API will replace this later.
     setTimeout(() => {
-      setStatus("completed");
-    }, 2000);
+      const resultTypes = [
+        "Normal",
+        "Normal",
+        "Suspicious",
+        "Malicious",
+      ];
+
+      const detectedType =
+        resultTypes[
+          Math.floor(Math.random() * resultTypes.length)
+        ];
+
+      const source = "192.168.1.50";
+      const destination = "10.0.0.20";
+      const protocol = "TCP";
+
+      addDetection({
+        date: new Date().toISOString().split("T")[0],
+        time: new Date().toLocaleTimeString(),
+        source,
+        destination,
+        protocol,
+        type: detectedType,
+      });
+
+      setIsAnalyzing(false);
+
+      setResult({
+        status: "Analysis Complete",
+        type: detectedType,
+        source,
+        destination,
+        protocol,
+        message: `${detectedType} traffic detected during analysis.`,
+      });
+    }, 1500);
   };
 
   return (
-    <div className="app">
-      <Navbar />
+    <div className="analyze-page">
 
-      <div className="app-body">
-        <Sidebar />
+      <div className="analyze-header">
+        <div>
+          <h2>Analyze Traffic</h2>
 
-        <main className="main-content">
-          <div className="page-header">
-            <h1>Analyze Network Traffic</h1>
+          <p>
+            Upload network traffic for security analysis.
+          </p>
+        </div>
+      </div>
+
+      <div className="analyze-card">
+
+        <div className="analyze-card-header">
+          <div>
+            <h3>Upload Traffic</h3>
 
             <p>
-              Upload a network capture file to detect
-              potential DoS attacks.
+              Select a network traffic file to analyze.
             </p>
           </div>
 
-          <FileUpload
-            onFileSelect={(file) => {
-              setSelectedFile(file);
-              setStatus(null);
-            }}
+          <div className="analyze-icon">
+            <Upload size={22} />
+          </div>
+        </div>
+
+        <label className="upload-area">
+
+          <input
+            type="file"
+            onChange={handleFileChange}
+            accept=".pcap,.pcapng,.csv,.json"
           />
 
-          {selectedFile && (
-            <div className="analysis-action">
-              <button
-                className="primary-button"
-                onClick={handleStartAnalysis}
-                disabled={status === "analyzing"}
-              >
-                {status === "analyzing"
-                  ? "Analyzing..."
-                  : "Start Analysis"}
-              </button>
-            </div>
-          )}
+          <Upload size={38} />
 
-          <AnalysisStatus status={status} />
-          {status === "completed" && (
-  <ResultCard
-    prediction="DoS Attack"
-    confidence={94}
-    packetsAnalyzed={12540}
-    requestRate={1250}
-  />
-)}
-        </main>
+          <strong>
+            {selectedFile
+              ? selectedFile.name
+              : "Drop your traffic file here"}
+          </strong>
+
+          <span>
+            {selectedFile
+              ? `${(selectedFile.size / 1024).toFixed(1)} KB`
+              : "or click to browse files"}
+          </span>
+
+        </label>
+
+        {selectedFile && (
+          <div className="selected-file">
+
+            <FileText size={20} />
+
+            <div className="selected-file-info">
+              <strong>{selectedFile.name}</strong>
+
+              <span>
+                File selected and ready for analysis
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="remove-file"
+              onClick={handleRemoveFile}
+              aria-label="Remove selected file"
+            >
+              <X size={18} />
+            </button>
+
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="analyze-button"
+          onClick={handleAnalyze}
+          disabled={!selectedFile || isAnalyzing}
+        >
+          <ShieldCheck size={19} />
+
+          {isAnalyzing
+            ? "Analyzing..."
+            : "Analyze Traffic"}
+        </button>
+
       </div>
+
+      <div className="result-card">
+
+        <div className="result-header">
+          <div>
+            <h3>Analysis Result</h3>
+
+            <p>
+              Security analysis results will appear here.
+            </p>
+          </div>
+        </div>
+
+        {!result && (
+          <div className="empty-result">
+
+            <ShieldCheck size={42} />
+
+            <strong>
+              {isAnalyzing
+                ? "Analyzing traffic..."
+                : "Waiting for analysis"}
+            </strong>
+
+            <span>
+              {isAnalyzing
+                ? "Please wait while the traffic is being analyzed."
+                : "Upload a traffic file and start an analysis."}
+            </span>
+
+          </div>
+        )}
+
+        {result && (
+  <div
+    className={`analysis-success ${
+      result.type === "Invalid"
+        ? "invalid"
+        : result.type.toLowerCase()
+    }`}
+  >
+            <div className="success-icon">
+              <ShieldCheck size={24} />
+            </div>
+
+            <div className="analysis-result-content">
+
+              <strong>{result.status}</strong>
+
+              <p>{result.message}</p>
+
+              <div className="analysis-details">
+
+                <div>
+                  <span>Type</span>
+                  <strong>{result.type}</strong>
+                </div>
+
+                <div>
+                  <span>Source</span>
+                  <strong>{result.source}</strong>
+                </div>
+
+                <div>
+                  <span>Destination</span>
+                  <strong>{result.destination}</strong>
+                </div>
+
+                <div>
+                  <span>Protocol</span>
+                  <strong>{result.protocol}</strong>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
     </div>
   );
 }

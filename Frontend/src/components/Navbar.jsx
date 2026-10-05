@@ -5,7 +5,11 @@ function Navbar() {
     <header className="navbar">
       <div className="navbar-brand">
         <ShieldCheck size={28} />
-        <span>NetShield</span>
+
+        <div>
+          <h1>NetShield</h1>
+          <span>Network Security Monitor</span>
+        </div>
       </div>
 
       <div className="navbar-status">
