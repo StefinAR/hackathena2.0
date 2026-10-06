@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.services.analysis_service import analyze_pcap
 from app.database.database import SessionLocal
 from app.models.detection import Detection
+from app.utils.security import generate_detection_hash
 
 
 router = APIRouter(
@@ -54,32 +55,42 @@ async def upload_pcap(
         db: Session = SessionLocal()
 
         try:
+            date = now.strftime("%Y-%m-%d")
+            time = now.strftime("%H:%M:%S")
+
+            status = analysis.get("status", "Unknown")
+            ddos_percentage = analysis.get("ddos_percentage", 0)
+            packets = analysis.get("packets", 0)
+            samples = analysis.get("samples", 0)
+            windows = analysis.get("windows", 0)
+
+            record_hash = generate_detection_hash(
+                filename=file.filename,
+                date=date,
+                time=time,
+                status=status,
+                ddos_percentage=ddos_percentage,
+                packets=packets,
+                samples=samples,
+                windows=windows,
+            )
+
             detection = Detection(
                 filename=file.filename,
 
-                date=now.strftime("%Y-%m-%d"),
-                time=now.strftime("%H:%M:%S"),
+                date=date,
+                time=time,
 
-                status=analysis.get(
-                    "status", "Unknown"
-                ),
+                status=status,
 
-                ddos_percentage=analysis.get(
-                    "ddos_percentage", 0
-                ),
+                ddos_percentage=ddos_percentage,
 
-                packets=analysis.get(
-                    "packets", 0
-                ),
+                packets=packets,
+                samples=samples,
+                windows=windows,
 
-                samples=analysis.get(
-                    "samples", 0
-                ),
-
-                windows=analysis.get(
-                    "windows", 0
-                ),
-            )
+                record_hash=record_hash,
+            )   
 
             db.add(detection)
             db.commit()
