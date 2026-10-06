@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Python
 __pycache__/
 *.pyc
@@ -23,3 +24,16 @@ dist/
 
 # Logs
 *.log
+=======
+# Python virtual environment
+venv/
+.venv/
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+>>>>>>> 74c84efeb80efe98d286a348c8104986158cefb0

@@ -11,11 +11,6 @@ function Navbar() {
           <span>Network Security Monitor</span>
         </div>
       </div>
-
-      <div className="navbar-status">
-        <span className="status-dot"></span>
-        System Online
-      </div>
     </header>
   );
 }
