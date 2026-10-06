@@ -1,43 +1,31 @@
-# backend/app/main.py
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.analysis import router as analysis_router
+from app.database.database import Base, engine
+from app.models.detection import Detection
+from app.config import settings
+
+Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
-    title="NetShield API",
+    title=settings.APP_NAME,
     description="DDoS detection backend using LUCID",
-    version="1.0.0",
+    version=settings.APP_VERSION,
 )
 
 
-# -------------------------------------------------------------------
-# CORS
-# -------------------------------------------------------------------
-
 app.add_middleware(
     CORSMiddleware,
-
-    # React development server
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
-
+    allow_origins=[settings.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# -------------------------------------------------------------------
-# Routes
-# -------------------------------------------------------------------
-
 app.include_router(analysis_router)
-
 
 # -------------------------------------------------------------------
 # Basic health check

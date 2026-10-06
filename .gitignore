@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# SQLite database
+*.db
+
+# Generated model output
+backend/app/models/output/
+
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log

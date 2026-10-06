@@ -28,3 +28,21 @@ export async function uploadTrafficFile(file) {
 
   return response.json();
 }
+export async function getDetectionHistory() {
+  const response = await fetch(
+    `${API_BASE_URL}/api/analysis/history`
+  );
+
+  if (!response.ok) {
+    let message = "Failed to fetch detection history.";
+
+    try {
+      const errorData = await response.json();
+      message = errorData.detail || message;
+    } catch {}
+
+    throw new Error(message);
+  }
+
+  return response.json();
+}

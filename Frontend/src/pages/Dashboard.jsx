@@ -21,6 +21,23 @@ import {
 import { useDetections } from "../context/useDetection";
 import "../styles/Dashboard.css";
 
+
+function getDisplayStatus(status) {
+  switch (status?.toLowerCase()) {
+    case "normal":
+      return "Normal";
+
+    case "ddos_attack":
+    case "ddos attack":
+    case "malicious":
+      return "Malicious";
+
+    default:
+      return status || "Unknown";
+  }
+}
+
+
 function Dashboard() {
   const { detections } = useDetections();
 
@@ -36,20 +53,23 @@ function Dashboard() {
     0
   );
 
-  const threatsDetected = detections.filter(
+  const normalCount = detections.filter(
     (detection) =>
-      detection.type === "Suspicious" ||
-      detection.type === "Malicious"
+      getDisplayStatus(detection.status || detection.type) === "Normal"
   ).length;
 
-  const normalCount = detections.filter(
-    (detection) => detection.type === "Normal"
+  const maliciousCount = detections.filter(
+    (detection) =>
+      getDisplayStatus(detection.status || detection.type) === "Malicious"
   ).length;
+
+  const threatsDetected = maliciousCount;
 
   const normalPercentage =
     totalAnalyses > 0
       ? Math.round((normalCount / totalAnalyses) * 100)
       : 0;
+
 
   // --------------------------------
   // Pie chart
@@ -61,18 +81,11 @@ function Dashboard() {
       value: normalCount,
     },
     {
-      name: "Suspicious",
-      value: detections.filter(
-        (detection) => detection.type === "Suspicious"
-      ).length,
-    },
-    {
       name: "Malicious",
-      value: detections.filter(
-        (detection) => detection.type === "Malicious"
-      ).length,
+      value: maliciousCount,
     },
   ];
+
 
   // --------------------------------
   // Network traffic chart
@@ -86,23 +99,20 @@ function Dashboard() {
       traffic: Number(detection.packets || 0),
     }));
 
+
   return (
     <div className="dashboard">
 
       {/* ================= HEADER ================= */}
 
       <div className="dashboard-header">
+
         <div>
           <h2>Security Dashboard</h2>
 
           <p>
             Monitor your network traffic and security status.
           </p>
-        </div>
-
-        <div className="dashboard-live">
-          <span></span>
-          Live Monitoring
         </div>
       </div>
 
@@ -128,7 +138,7 @@ function Dashboard() {
         <StatCard
           title="Threats Detected"
           value={threatsDetected}
-          subtitle="Suspicious and malicious files"
+          subtitle="Malicious files detected"
           icon={<ShieldAlert size={22} />}
         />
 
@@ -162,11 +172,15 @@ function Dashboard() {
 
           </div>
 
+
           <div className="chart-container">
 
             {trafficData.length > 0 ? (
 
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
 
                 <LineChart data={trafficData}>
 
@@ -222,33 +236,46 @@ function Dashboard() {
 
           </div>
 
+
           <div className="pie-container">
 
-            <ResponsiveContainer width="100%" height="100%">
+            {totalAnalyses > 0 ? (
 
-              <PieChart>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
 
-                <Pie
-                  data={threatData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  label
-                >
+                <PieChart>
 
-                  <Cell fill="#22c55e" />
-                  <Cell fill="#f59e0b" />
-                  <Cell fill="#ef4444" />
+                  <Pie
+                    data={threatData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    label
+                  >
 
-                </Pie>
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#ef4444" />
 
-                <Tooltip />
+                  </Pie>
 
-              </PieChart>
+                  <Tooltip />
 
-            </ResponsiveContainer>
+                </PieChart>
+
+              </ResponsiveContainer>
+
+            ) : (
+
+              <div className="dashboard-empty">
+                No classification data available yet.
+              </div>
+
+            )}
 
           </div>
 
@@ -258,11 +285,6 @@ function Dashboard() {
             <div>
               <span className="legend-dot normal"></span>
               Normal
-            </div>
-
-            <div>
-              <span className="legend-dot suspicious"></span>
-              Suspicious
             </div>
 
             <div>
@@ -317,41 +339,50 @@ function Dashboard() {
 
               {detections.length > 0 ? (
 
-                detections.slice(0, 4).map((detection) => (
+                detections
+                  .slice(0, 4)
+                  .map((detection) => {
 
-                  <tr key={detection.id}>
+                    const displayStatus = getDisplayStatus(
+                      detection.status || detection.type
+                    );
 
-                    <td>
-                      {detection.time}
-                    </td>
+                    return (
+                      <tr key={detection.id}>
 
-                    <td>
-                      {detection.filename || "-"}
-                    </td>
+                        <td>
+                          {detection.time}
+                        </td>
 
-                    <td>
-                      {detection.packets ?? 0}
-                    </td>
+                        <td>
+                          {detection.filename || "-"}
+                        </td>
 
-                    <td>
-                      {detection.ddosPercentage !== undefined
-                        ? `${detection.ddosPercentage}%`
-                        : "-"}
-                    </td>
+                        <td>
+                          {detection.packets ?? 0}
+                        </td>
 
-                    <td>
+                        <td>
+                          {detection.ddos_percentage !== undefined
+                            ? `${detection.ddos_percentage}%`
+                            : detection.ddosPercentage !== undefined
+                              ? `${detection.ddosPercentage}%`
+                              : "-"}
+                        </td>
 
-                      <span
-                        className={`detection-status ${detection.type.toLowerCase()}`}
-                      >
-                        {detection.type}
-                      </span>
+                        <td>
 
-                    </td>
+                          <span
+                            className={`detection-status ${displayStatus.toLowerCase()}`}
+                          >
+                            {displayStatus}
+                          </span>
 
-                  </tr>
+                        </td>
 
-                ))
+                      </tr>
+                    );
+                  })
 
               ) : (
 

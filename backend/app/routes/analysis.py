@@ -1,8 +1,13 @@
 # backend/app/routes/analysis.py
 
+from datetime import datetime
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from sqlalchemy.orm import Session
 
 from app.services.analysis_service import analyze_pcap
+from app.database.database import SessionLocal
+from app.models.detection import Detection
 
 
 router = APIRouter(
@@ -16,7 +21,9 @@ async def upload_pcap(
     file: UploadFile = File(...)
 ):
     """
-    Upload a PCAP file and analyze it using LUCID.
+    Upload a PCAP file, analyze it using LUCID,
+    save the detection result to SQLite,
+    and return the result.
     """
 
     if not file.filename:
@@ -34,8 +41,52 @@ async def upload_pcap(
         )
 
     try:
-
+        # Run LUCID analysis
         result = await analyze_pcap(file)
+
+        # Get the actual analysis result
+        analysis = result.get("result", {})
+
+        # Current date and time
+        now = datetime.now()
+
+        # Create database session
+        db: Session = SessionLocal()
+
+        try:
+            detection = Detection(
+                filename=file.filename,
+
+                date=now.strftime("%Y-%m-%d"),
+                time=now.strftime("%H:%M:%S"),
+
+                status=analysis.get(
+                    "status", "Unknown"
+                ),
+
+                ddos_percentage=analysis.get(
+                    "ddos_percentage", 0
+                ),
+
+                packets=analysis.get(
+                    "packets", 0
+                ),
+
+                samples=analysis.get(
+                    "samples", 0
+                ),
+
+                windows=analysis.get(
+                    "windows", 0
+                ),
+            )
+
+            db.add(detection)
+            db.commit()
+            db.refresh(detection)
+
+        finally:
+            db.close()
 
         return result
 
@@ -66,3 +117,40 @@ async def upload_pcap(
             status_code=500,
             detail=f"Unexpected error: {str(exc)}"
         )
+
+
+@router.get("/history")
+def get_detection_history():
+    """
+    Return all previous detection records from the database.
+    """
+
+    db: Session = SessionLocal()
+
+    try:
+        detections = (
+            db.query(Detection)
+            .order_by(Detection.id.desc())
+            .all()
+        )
+
+        return {
+            "success": True,
+            "detections": [
+                {
+                    "id": detection.id,
+                    "filename": detection.filename,
+                    "date": detection.date,
+                    "time": detection.time,
+                    "status": detection.status,
+                    "ddos_percentage": detection.ddos_percentage,
+                    "packets": detection.packets,
+                    "samples": detection.samples,
+                    "windows": detection.windows,
+                }
+                for detection in detections
+            ],
+        }
+
+    finally:
+        db.close()

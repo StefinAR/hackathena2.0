@@ -91,10 +91,6 @@ const isValidFileType = (file) => {
           detectedType = "Normal";
           break;
 
-        case "suspicious":
-          detectedType = "Suspicious";
-          break;
-
         case "ddos_attack":
           detectedType = "Malicious";
           break;
