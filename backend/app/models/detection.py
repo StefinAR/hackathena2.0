@@ -20,3 +20,4 @@ class Detection(Base):
     packets = Column(Integer, nullable=False)
     samples = Column(Integer, nullable=False)
     windows = Column(Integer, nullable=False)
+    record_hash = Column(String(64), nullable=False)
