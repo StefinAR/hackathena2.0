@@ -14,7 +14,6 @@ import {
 
 import "../styles/Analyze.css";
 
-
 function Analyze() {
   const { addDetection } = useDetections();
 
@@ -26,7 +25,6 @@ function Analyze() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
 
-
   // ============================================================
   // DOMAIN MONITORING STATE
   // ============================================================
@@ -34,7 +32,6 @@ function Analyze() {
   const [domain, setDomain] = useState("");
   const [isCheckingDomain, setIsCheckingDomain] = useState(false);
   const [domainResult, setDomainResult] = useState(null);
-
 
   // ============================================================
   // ALLOWED PCAP FILE TYPES
@@ -45,7 +42,6 @@ function Analyze() {
     ".pcapng",
     ".cap",
   ];
-
 
   // ============================================================
   // VALIDATE PCAP FILE
@@ -58,7 +54,6 @@ function Analyze() {
       fileName.endsWith(extension)
     );
   };
-
 
   // ============================================================
   // SELECT PCAP FILE
@@ -78,9 +73,6 @@ function Analyze() {
         type: "Invalid",
         message:
           "Unsupported file type. Please select a PCAP, PCAPNG, or CAP file.",
-        source: "-",
-        destination: "-",
-        protocol: "-",
       });
 
       return;
@@ -90,7 +82,6 @@ function Analyze() {
     setResult(null);
     setIsAnalyzing(false);
   };
-
 
   // ============================================================
   // REMOVE SELECTED PCAP
@@ -102,6 +93,49 @@ function Analyze() {
     setIsAnalyzing(false);
   };
 
+  // ============================================================
+  // NORMALIZE LUCID STATUS
+  // ============================================================
+
+  const getDetectedType = (status, ddosScore) => {
+    const normalizedStatus = String(status || "")
+      .trim()
+      .toLowerCase();
+
+    // Prefer backend/LUCID status
+    if (
+      normalizedStatus === "ddos_attack" ||
+      normalizedStatus === "ddos attack" ||
+      normalizedStatus === "malicious"
+    ) {
+      return "Malicious";
+    }
+
+    if (normalizedStatus === "suspicious") {
+      return "Suspicious";
+    }
+
+    if (normalizedStatus === "normal") {
+      return "Normal";
+    }
+
+    // Fallback to DDoS percentage
+    const numericScore = Number.parseFloat(
+      String(ddosScore).replace("%", "")
+    );
+
+    if (!Number.isNaN(numericScore)) {
+      if (numericScore >= 50) {
+        return "Malicious";
+      }
+
+      if (numericScore >= 20) {
+        return "Suspicious";
+      }
+    }
+
+    return "Normal";
+  };
 
   // ============================================================
   // PCAP + LUCID ANALYSIS
@@ -115,16 +149,15 @@ function Analyze() {
 
     try {
       // ----------------------------------------------------------
-      // Send PCAP to FastAPI
+      // SEND PCAP TO FASTAPI
       // ----------------------------------------------------------
 
       const data = await uploadTrafficFile(selectedFile);
 
       console.log("PCAP analysis response:", data);
 
-
       // ----------------------------------------------------------
-      // Validate backend response
+      // VALIDATE BACKEND RESPONSE
       // ----------------------------------------------------------
 
       if (!data.success || !data.result) {
@@ -133,12 +166,12 @@ function Analyze() {
         );
       }
 
-
       const lucidResult = data.result;
 
+      console.log("LUCID result:", lucidResult);
 
       // ----------------------------------------------------------
-      // Values returned by LUCID
+      // REQUIRED VALUES
       // ----------------------------------------------------------
 
       const filename =
@@ -154,47 +187,35 @@ function Analyze() {
         lucidResult.packets ??
         "N/A";
 
-      const samples =
-        lucidResult.Samples ??
-        lucidResult.samples ??
-        "N/A";
-
-      const processingTime =
-        lucidResult.Time ??
-        lucidResult.time ??
-        "N/A";
-
-      const model =
-        lucidResult.Model ??
-        lucidResult.model ??
-        "LUCID";
-
-
       // ----------------------------------------------------------
-      // Determine detection type
+      // DETERMINE DETECTION TYPE
       // ----------------------------------------------------------
 
-      let detectedType = "Normal";
+      const detectedType = getDetectedType(
+        lucidResult.status,
+        ddosScore
+      );
+
+      // ----------------------------------------------------------
+      // CONVERT DDOS PERCENTAGE TO NUMBER
+      // ----------------------------------------------------------
 
       const numericDdosScore =
         Number.parseFloat(
           String(ddosScore).replace("%", "")
         );
 
+      // ----------------------------------------------------------
+      // CURRENT REAL TIME
+      //
+      // This is the actual browser time when the analysis
+      // response is received and the result is displayed.
+      // ----------------------------------------------------------
 
-      if (!Number.isNaN(numericDdosScore)) {
-
-        if (numericDdosScore >= 50) {
-          detectedType = "Malicious";
-
-        } else if (numericDdosScore >= 20) {
-          detectedType = "Suspicious";
-        }
-      }
-
+      const realTime = new Date().toLocaleTimeString();
 
       // ----------------------------------------------------------
-      // Add detection to existing context
+      // ADD DETECTION TO CONTEXT
       // ----------------------------------------------------------
 
       addDetection({
@@ -204,8 +225,7 @@ function Analyze() {
           .toISOString()
           .split("T")[0],
 
-        time: new Date()
-          .toLocaleTimeString(),
+        time: realTime,
 
         filename,
 
@@ -220,35 +240,19 @@ function Analyze() {
           packets === "N/A"
             ? 0
             : packets,
-
-        samples:
-          samples === "N/A"
-            ? 0
-            : samples,
-
-        windows:
-          lucidResult.Windows ??
-          lucidResult.windows ??
-          0,
       });
 
-
       // ----------------------------------------------------------
-      // Display LUCID result
+      // DISPLAY RESULT
       // ----------------------------------------------------------
 
       setResult({
-
         status:
           detectedType === "Normal"
             ? "Analysis Complete"
             : "Threat Detected",
 
         type: detectedType,
-
-        source: "-",
-        destination: "-",
-        protocol: "-",
 
         message:
           detectedType === "Normal"
@@ -257,69 +261,23 @@ function Analyze() {
 
         filename,
 
-        model,
-
         ddosScore,
 
         packets,
 
-        samples,
-
-        processingTime,
-
-        accuracy:
-          lucidResult.Accuracy ??
-          lucidResult.accuracy ??
-          "N/A",
-
-        f1Score:
-          lucidResult.F1Score ??
-          lucidResult.f1_score ??
-          "N/A",
-
-        tpr:
-          lucidResult.TPR ??
-          lucidResult.tpr ??
-          "N/A",
-
-        fpr:
-          lucidResult.FPR ??
-          lucidResult.fpr ??
-          "N/A",
-
-        tnr:
-          lucidResult.TNR ??
-          lucidResult.tnr ??
-          "N/A",
-
-        fnr:
-          lucidResult.FNR ??
-          lucidResult.fnr ??
-          "N/A",
-
-        rawResult: lucidResult,
+        realTime,
       });
 
-
     } catch (error) {
-
       console.error(
         "PCAP analysis failed:",
         error
       );
 
-
       setResult({
-
         status: "Analysis Failed",
 
         type: "Error",
-
-        source: "-",
-
-        destination: "-",
-
-        protocol: "-",
 
         message:
           error.response?.data?.detail ||
@@ -327,21 +285,16 @@ function Analyze() {
           "Unable to analyze the uploaded traffic file.",
       });
 
-
     } finally {
-
       setIsAnalyzing(false);
-
     }
   };
-
 
   // ============================================================
   // DOMAIN HEALTH MONITOR
   // ============================================================
 
   const handleDomainCheck = async () => {
-
     if (
       !domain.trim() ||
       isCheckingDomain
@@ -349,23 +302,17 @@ function Analyze() {
       return;
     }
 
-
     let cleanDomain = domain.trim();
 
-
     // Add https:// if user didn't provide it
-
     if (!/^https?:\/\//i.test(cleanDomain)) {
       cleanDomain = `https://${cleanDomain}`;
     }
 
-
     setIsCheckingDomain(true);
     setDomainResult(null);
 
-
     try {
-
       const response = await axios.post(
         "http://127.0.0.1:8000/monitor/start",
         {
@@ -373,12 +320,9 @@ function Analyze() {
         }
       );
 
-
       const data = response.data;
 
-
       setDomainResult({
-
         domain: data.target,
 
         status:
@@ -402,17 +346,13 @@ function Analyze() {
           null,
       });
 
-
     } catch (error) {
-
       console.error(
         "Domain monitoring failed:",
         error
       );
 
-
       setDomainResult({
-
         domain: cleanDomain,
 
         status: "ERROR",
@@ -429,32 +369,24 @@ function Analyze() {
         metrics: null,
       });
 
-
     } finally {
-
       setIsCheckingDomain(false);
-
     }
   };
-
 
   // ============================================================
   // UI
   // ============================================================
 
   return (
-
     <div className="analyze-page">
-
 
       {/* ======================================================
           PAGE HEADER
       ====================================================== */}
 
       <div className="analyze-header">
-
         <div>
-
           <h2>
             Analyze Traffic
           </h2>
@@ -462,18 +394,14 @@ function Analyze() {
           <p>
             Upload network traffic for security analysis.
           </p>
-
         </div>
-
       </div>
-
 
       {/* ======================================================
           PCAP ANALYSIS CARD
       ====================================================== */}
 
       <div className="analyze-card">
-
 
         {/* ------------------------------------------------------
             CARD HEADER
@@ -482,7 +410,6 @@ function Analyze() {
         <div className="analyze-card-header">
 
           <div>
-
             <h3>
               Upload Traffic
             </h3>
@@ -490,18 +417,13 @@ function Analyze() {
             <p>
               Select a network traffic file to analyze.
             </p>
-
           </div>
 
-
           <div className="analyze-icon">
-
             <Upload size={22} />
-
           </div>
 
         </div>
-
 
         {/* ------------------------------------------------------
             UPLOAD AREA
@@ -515,42 +437,32 @@ function Analyze() {
             accept=".pcap,.pcapng,.cap"
           />
 
-
           <Upload size={38} />
 
-
           <strong>
-
             {selectedFile
               ? selectedFile.name
               : "Drop your traffic file here"}
-
           </strong>
 
-
           <span>
-
             {selectedFile
               ? `${(
                   selectedFile.size / 1024
                 ).toFixed(1)} KB`
               : "or click to browse files"}
-
           </span>
 
         </label>
-
 
         {/* ------------------------------------------------------
             SELECTED FILE
         ------------------------------------------------------ */}
 
         {selectedFile && (
-
           <div className="selected-file">
 
             <FileText size={20} />
-
 
             <div className="selected-file-info">
 
@@ -564,22 +476,17 @@ function Analyze() {
 
             </div>
 
-
             <button
               type="button"
               className="remove-file"
               onClick={handleRemoveFile}
               aria-label="Remove selected file"
             >
-
               <X size={18} />
-
             </button>
 
           </div>
-
         )}
-
 
         {/* ------------------------------------------------------
             ANALYZE BUTTON
@@ -603,13 +510,11 @@ function Analyze() {
 
         </button>
 
-
         {/* ======================================================
             DOMAIN HEALTH MONITOR
         ====================================================== */}
 
         <div className="domain-check-card">
-
 
           {/* ----------------------------------------------------
               DOMAIN HEADER
@@ -630,15 +535,11 @@ function Analyze() {
 
             </div>
 
-
             <div className="domain-check-icon">
-
               <Activity size={22} />
-
             </div>
 
           </div>
-
 
           {/* ----------------------------------------------------
               DOMAIN INPUT
@@ -655,7 +556,6 @@ function Analyze() {
               }
             />
 
-
             <button
               type="button"
               onClick={handleDomainCheck}
@@ -664,29 +564,24 @@ function Analyze() {
                 isCheckingDomain
               }
             >
-
               {isCheckingDomain
                 ? "Checking..."
                 : "Check Domain"}
-
             </button>
 
           </div>
-
 
           {/* ----------------------------------------------------
               DOMAIN RESULT
           ---------------------------------------------------- */}
 
           {domainResult && (
-
             <div
               className={`domain-result ${
                 domainResult.status?.toLowerCase() ||
                 "error"
               }`}
             >
-
 
               {/* ----------------------------------------------
                   RESULT HEADER
@@ -704,18 +599,14 @@ function Analyze() {
 
               </div>
 
-
               {/* ----------------------------------------------
                   METRICS
               ---------------------------------------------- */}
 
               {domainResult.metrics && (
-
                 <div className="domain-result-details">
 
-
                   <div>
-
                     <span>
                       Availability
                     </span>
@@ -726,12 +617,9 @@ function Analyze() {
                           .availability_percent
                       }%
                     </strong>
-
                   </div>
 
-
                   <div>
-
                     <span>
                       Avg Response
                     </span>
@@ -742,12 +630,9 @@ function Analyze() {
                           .average_response_time_ms
                       } ms
                     </strong>
-
                   </div>
 
-
                   <div>
-
                     <span>
                       5xx Errors
                     </span>
@@ -758,12 +643,9 @@ function Analyze() {
                           .error_5xx_rate_percent
                       }%
                     </strong>
-
                   </div>
 
-
                   <div>
-
                     <span>
                       Timeouts
                     </span>
@@ -774,12 +656,9 @@ function Analyze() {
                           .timeout_rate_percent
                       }%
                     </strong>
-
                   </div>
 
-
                   <div>
-
                     <span>
                       Anomaly Score
                     </span>
@@ -787,62 +666,48 @@ function Analyze() {
                     <strong>
                       {domainResult.anomalyScore}
                     </strong>
-
                   </div>
 
                 </div>
-
               )}
-
 
               {/* ----------------------------------------------
                   DETECTION REASONS
               ---------------------------------------------- */}
 
               {domainResult.reasons?.length > 0 && (
-
                 <div className="domain-result-reasons">
 
                   <strong>
                     Detection Reasons
                   </strong>
 
-
                   <ul>
-
                     {domainResult.reasons.map(
                       (reason, index) => (
-
                         <li key={index}>
                           {reason}
                         </li>
-
                       )
                     )}
-
                   </ul>
 
                 </div>
-
               )}
-
 
               {/* ----------------------------------------------
                   MONITORING CHECKS
               ---------------------------------------------- */}
 
               {domainResult.checks?.length > 0 && (
-
                 <div className="domain-checks">
 
                   <strong>
                     Monitoring Checks
                   </strong>
 
-
                   {domainResult.checks.map(
                     (check) => (
-
                       <div
                         className="domain-check-row"
                         key={check.check_number}
@@ -852,17 +717,15 @@ function Analyze() {
                           Check {check.check_number}
                         </span>
 
-
                         <span>
                           HTTP{" "}
-                          {check.status_code ?? "ERROR"}
+                          {check.status_code ??
+                            "ERROR"}
                         </span>
-
 
                         <span>
                           {check.response_time_ms} ms
                         </span>
-
 
                         <span>
                           {check.available
@@ -871,45 +734,36 @@ function Analyze() {
                         </span>
 
                       </div>
-
                     )
                   )}
 
                 </div>
-
               )}
-
 
               {/* ----------------------------------------------
                   MONITORING NOTE
               ---------------------------------------------- */}
 
               <p className="domain-result-note">
-
                 This result is based on black-box
                 service monitoring. It measures
                 observable response behavior and does
                 not directly measure the target
                 server's total network traffic.
-
               </p>
 
-
             </div>
-
           )}
 
         </div>
 
       </div>
 
-
       {/* ======================================================
           PCAP RESULT CARD
       ====================================================== */}
 
       <div className="result-card">
-
 
         {/* ------------------------------------------------------
             RESULT HEADER
@@ -931,265 +785,150 @@ function Analyze() {
 
         </div>
 
-
         {/* ------------------------------------------------------
             EMPTY STATE
         ------------------------------------------------------ */}
 
         {!result && (
-
           <div className="empty-result">
 
             <ShieldCheck size={42} />
 
-
             <strong>
-
               {isAnalyzing
                 ? "Analyzing traffic..."
                 : "Waiting for analysis"}
-
             </strong>
 
-
             <span>
-
               {isAnalyzing
                 ? "Please wait while the traffic is being analyzed."
                 : "Upload a traffic file and start an analysis."}
-
             </span>
 
           </div>
-
         )}
 
-
         {/* ------------------------------------------------------
-            LUCID RESULT
+            ANALYSIS RESULT
         ------------------------------------------------------ */}
 
         {result && (
-
           <div
             className={`analysis-success ${
               result.type === "Error" ||
               result.type === "Invalid"
                 ? "invalid"
+                : result.type === "Malicious"
+                ? "malicious"
+                : result.type === "Suspicious"
+                ? "suspicious"
                 : "normal"
             }`}
           >
 
+            {/* ----------------------------------------------
+                RESULT ICON
+            ---------------------------------------------- */}
 
             <div className="success-icon">
-
               <ShieldCheck size={24} />
-
             </div>
-
 
             <div className="analysis-result-content">
 
-
-              <strong className="analysis-status">
-
-                {result.status}
-
-              </strong>
-
-
-              <p>
-
-                {result.message}
-
-              </p>
-
-
               {/* ----------------------------------------------
-                  LUCID INFORMATION
+                  RESULT STATUS
               ---------------------------------------------- */}
 
-              {result.rawResult && (
+              <strong className="analysis-status">
+                {result.status}
+              </strong>
 
-                <div className="analysis-details">
+              <p>
+                {result.message}
+              </p>
 
+              {/* ----------------------------------------------
+                  ANALYSIS DETAILS
+                  ONLY:
+                  STATUS
+                  FILENAME
+                  PACKETS
+                  DDOS %
+                  REAL TIME
+              ---------------------------------------------- */}
 
-                  <div>
+              {result.type !== "Error" &&
+                result.type !== "Invalid" && (
+                  <div className="analysis-details">
 
-                    <span>
-                      Status
-                    </span>
+                    {/* STATUS */}
 
-                    <strong>
-                      {result.type}
-                    </strong>
+                    <div>
+                      <span>
+                        Status
+                      </span>
 
-                  </div>
+                      <strong>
+                        {result.type}
+                      </strong>
+                    </div>
 
+                    {/* FILENAME */}
 
-                  <div>
+                    <div>
+                      <span>
+                        Filename
+                      </span>
 
-                    <span>
-                      Model
-                    </span>
+                      <strong>
+                        {result.filename}
+                      </strong>
+                    </div>
 
-                    <strong>
-                      {result.model}
-                    </strong>
+                    {/* PACKETS */}
 
-                  </div>
+                    <div>
+                      <span>
+                        Packets
+                      </span>
 
+                      <strong>
+                        {result.packets}
+                      </strong>
+                    </div>
 
-                  <div>
+                    {/* DDOS % */}
 
-                    <span>
-                      PCAP
-                    </span>
+                    <div>
+                      <span>
+                        DDoS %
+                      </span>
 
-                    <strong>
-                      {result.filename}
-                    </strong>
+                      <strong>
+                        {result.ddosScore}
+                      </strong>
+                    </div>
 
-                  </div>
+                    {/* REAL TIME */}
 
+                    <div>
+                      <span>
+                        Real Time
+                      </span>
 
-                  <div>
-
-                    <span>
-                      DDoS %
-                    </span>
-
-                    <strong>
-                      {result.ddosScore}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      Packets
-                    </span>
-
-                    <strong>
-                      {result.packets}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      Samples
-                    </span>
-
-                    <strong>
-                      {result.samples}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      Processing Time
-                    </span>
-
-                    <strong>
-                      {result.processingTime}
-                    </strong>
+                      <strong>
+                        {result.realTime}
+                      </strong>
+                    </div>
 
                   </div>
-
-
-                  <div>
-
-                    <span>
-                      Accuracy
-                    </span>
-
-                    <strong>
-                      {result.accuracy}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      F1 Score
-                    </span>
-
-                    <strong>
-                      {result.f1Score}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      TPR
-                    </span>
-
-                    <strong>
-                      {result.tpr}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      FPR
-                    </span>
-
-                    <strong>
-                      {result.fpr}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      TNR
-                    </span>
-
-                    <strong>
-                      {result.tnr}
-                    </strong>
-
-                  </div>
-
-
-                  <div>
-
-                    <span>
-                      FNR
-                    </span>
-
-                    <strong>
-                      {result.fnr}
-                    </strong>
-
-                  </div>
-
-                </div>
-
-              )}
+                )}
 
             </div>
 
           </div>
-
         )}
 
       </div>
@@ -1197,6 +936,5 @@ function Analyze() {
     </div>
   );
 }
-
 
 export default Analyze;
