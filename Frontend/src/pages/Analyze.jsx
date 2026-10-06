@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDetections } from "../context/useDetection";
+import { uploadTrafficFile } from "../api/api";
 
 import {
   Upload,
@@ -66,51 +67,78 @@ const isValidFileType = (file) => {
     setIsAnalyzing(false);
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!selectedFile || isAnalyzing) return;
 
     setIsAnalyzing(true);
     setResult(null);
 
-    // Temporary frontend simulation.
-    // Backend API will replace this later.
-    setTimeout(() => {
-      const resultTypes = [
-        "Normal",
-        "Normal",
-        "Suspicious",
-        "Malicious",
-      ];
+    try {
+      const data = await uploadTrafficFile(selectedFile);
 
-      const detectedType =
-        resultTypes[
-          Math.floor(Math.random() * resultTypes.length)
-        ];
+      console.log("Backend response:", data);
 
-      const source = "192.168.1.50";
-      const destination = "10.0.0.20";
-      const protocol = "TCP";
+      if (!data.success) {
+        throw new Error("Backend analysis failed.");
+      }
+
+      const analysis = data.result;
+
+      const detectedType = analysis.status;
 
       addDetection({
         date: new Date().toISOString().split("T")[0],
         time: new Date().toLocaleTimeString(),
-        source,
-        destination,
-        protocol,
+        source: "-",
+        destination: "-",
+        protocol: "-",
         type: detectedType,
       });
-
-      setIsAnalyzing(false);
 
       setResult({
-        status: "Analysis Complete",
+        status: analysis.status === "Normal"
+          ? "Analysis Complete"
+          : "Threat Detected",
+
         type: detectedType,
-        source,
-        destination,
-        protocol,
-        message: `${detectedType} traffic detected during analysis.`,
+
+        source: "-",
+
+        destination: "-",
+
+        protocol: "-",
+
+        message:
+          analysis.status === "Normal"
+            ? "Normal traffic detected during analysis."
+            : `${analysis.status} traffic detected during analysis.`,
+
+        ddosPercentage: analysis.ddos_percentage,
+
+        packets: analysis.packets,
+
+        samples: analysis.samples,
+
+        windows: analysis.windows,
       });
-    }, 1500);
+
+    } catch (error) {
+      console.error("Analysis error:", error);
+
+      setResult({
+        status: "Analysis Failed",
+        type: "Invalid",
+        source: "-",
+        destination: "-",
+        protocol: "-",
+        message:
+          error.message ||
+          "Unable to analyze the uploaded traffic file.",
+      });
+
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -259,23 +287,38 @@ const isValidFileType = (file) => {
               <div className="analysis-details">
 
                 <div>
-                  <span>Type</span>
+                  <span>Status</span>
                   <strong>{result.type}</strong>
                 </div>
 
                 <div>
-                  <span>Source</span>
-                  <strong>{result.source}</strong>
+                  <span>DDoS Probability</span>
+                  <strong>
+                    {result.ddosPercentage !== undefined
+                      ? `${result.ddosPercentage}%`
+                      : "-"}
+                  </strong>
                 </div>
 
                 <div>
-                  <span>Destination</span>
-                  <strong>{result.destination}</strong>
+                  <span>Packets</span>
+                  <strong>
+                    {result.packets ?? "-"}
+                  </strong>
                 </div>
 
                 <div>
-                  <span>Protocol</span>
-                  <strong>{result.protocol}</strong>
+                  <span>Samples</span>
+                  <strong>
+                    {result.samples ?? "-"}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Windows</span>
+                  <strong>
+                    {result.windows ?? "-"}
+                  </strong>
                 </div>
 
               </div>
