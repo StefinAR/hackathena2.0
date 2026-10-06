@@ -1,38 +1,16 @@
-# backend/app/services/lucid_service.py
-
 import subprocess
+import sys
 from pathlib import Path
-
-
-# -------------------------------------------------------------------
-# Paths
-# -------------------------------------------------------------------
+import re
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
-# Change this if your lucid_cnn.py is somewhere else.
 LUCID_DIR = BACKEND_DIR / "app" / "models"
-
 LUCID_SCRIPT = LUCID_DIR / "lucid_cnn.py"
-
 MODEL_PATH = LUCID_DIR / "10t-10n-DOS2019-LUCID.h5"
 
 
-# -------------------------------------------------------------------
-# Run LUCID
-# -------------------------------------------------------------------
-
 def run_lucid(pcap_path: Path) -> dict:
-    """
-    Run LUCID on a PCAP file using the trained NetShield model.
-
-    Equivalent command:
-
-        python lucid_cnn.py \
-            --predict_live <pcap> \
-            --model models// .h5 \
-            --dataset_type DOS2019
-    """
 
     if not pcap_path.exists():
         raise FileNotFoundError(
@@ -50,7 +28,7 @@ def run_lucid(pcap_path: Path) -> dict:
         )
 
     command = [
-        "python",
+        sys.executable,
         str(LUCID_SCRIPT),
         "--predict_live",
         str(pcap_path),
@@ -66,7 +44,7 @@ def run_lucid(pcap_path: Path) -> dict:
             cwd=str(LUCID_DIR),
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=1800,
         )
 
     except subprocess.TimeoutExpired:
@@ -84,50 +62,64 @@ def run_lucid(pcap_path: Path) -> dict:
     return parse_lucid_output(result.stdout)
 
 
-# -------------------------------------------------------------------
-# Parse LUCID output
-# -------------------------------------------------------------------
-
 def parse_lucid_output(output: str) -> dict:
-    """
-    Extract the dictionary printed by LUCID.
+    predictions = []
 
-    Example LUCID output:
-
-    {'Model': 'DOS2019-LUCID',
-     'Time': '0.051',
-     'Packets': 919,
-     'Samples': 167,
-     'DDOS%': '0.311',
-     'Accuracy': 'N/A',
-     'F1Score': 'N/A',
-     'TPR': 'N/A',
-     'FPR': 'N/A',
-     'TNR': 'N/A',
-     'FNR': 'N/A',
-     'Source': 'example.pcap'}
-    """
-
-    import ast
-
-    # Search from the bottom because LUCID can print
-    # other information before the final result.
-    lines = output.strip().splitlines()
-
-    for line in reversed(lines):
-        line = line.strip()
-
-        if line.startswith("{") and line.endswith("}"):
-            try:
-                parsed = ast.literal_eval(line)
-
-                if isinstance(parsed, dict):
-                    return parsed
-
-            except (ValueError, SyntaxError):
-                continue
-
-    raise RuntimeError(
-        "Could not find a valid LUCID result in its output.\n\n"
-        f"LUCID output:\n{output}"
+    # LUCID prints each prediction as a multi-line dictionary.
+    # Extract the fields we actually need from each dictionary.
+    pattern = re.compile(
+        r"'Packets':\s*np\.int64\((\d+)\).*?"
+        r"'Samples':\s*(\d+).*?"
+        r"'DDOS%':\s*'([0-9.]+)'",
+        re.DOTALL
     )
+
+    matches = pattern.findall(output)
+
+    for packets, samples, ddos_percentage in matches:
+        predictions.append({
+            "packets": int(packets),
+            "samples": int(samples),
+            "ddos_percentage": float(ddos_percentage),
+        })
+
+    if not predictions:
+        raise RuntimeError(
+            "LUCID completed but returned no prediction results."
+        )
+
+    total_packets = sum(
+        p["packets"] for p in predictions
+    )
+
+    total_samples = sum(
+        p["samples"] for p in predictions
+    )
+
+    # Convert each window's DDOS% into the number of
+    # DDoS predictions in that window.
+    total_ddos_samples = sum(
+        p["ddos_percentage"] * p["samples"]
+        for p in predictions
+    )
+
+    if total_samples > 0:
+        ddos_percentage = (
+            total_ddos_samples / total_samples
+        )
+    else:
+        ddos_percentage = 0.0
+
+    status = (
+        "DDoS Attack"
+        if ddos_percentage >= 0.5
+        else "Normal"
+    )
+
+    return {
+        "status": status,
+        "ddos_percentage": round(ddos_percentage * 100, 2),
+        "packets": total_packets,
+        "samples": total_samples,
+        "windows": len(predictions),
+    }

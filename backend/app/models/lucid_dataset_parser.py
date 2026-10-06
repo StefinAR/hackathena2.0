@@ -206,7 +206,7 @@ def process_live_traffic(cap, dataset_type, in_labels, max_flow_len, traffic_typ
                 pkt = cap.next()
                 pf = parse_packet(pkt)
                 temp_dict = store_packet(pf,temp_dict,start_time_window,max_flow_len)
-            except:
+            except StopIteration:
                 break
 
     apply_labels(temp_dict,labelled_flows, in_labels,traffic_type)

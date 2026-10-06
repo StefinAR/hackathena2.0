@@ -261,12 +261,15 @@ def main(argv):
         if args.predict_live is None:
             print("Please specify a valid network interface or pcap file!")
             exit(-1)
-        elif args.predict_live.endswith('.pcap'):
+        elif args.predict_live.lower().endswith((".pcap", ".pcapng")):
             pcap_file = args.predict_live
-            cap = pyshark.FileCapture(pcap_file)
-            data_source = pcap_file.split('/')[-1].strip()
+            cap = pyshark.FileCapture(
+                pcap_file,
+                keep_packets=False
+            )
+            data_source = os.path.basename(pcap_file).strip()
         else:
-            cap =  pyshark.LiveCapture(interface=args.predict_live)
+            cap = pyshark.FileCapture(args.predict_live)
             data_source = args.predict_live
 
         print ("Prediction on network traffic from: ", data_source)
@@ -281,40 +284,99 @@ def main(argv):
             print ("No valid model specified!")
             exit(-1)
 
-        model_filename = model_path.split('/')[-1].strip()
+        model_filename = os.path.basename(model_path)
         filename_prefix = model_filename.split('n')[0] + 'n-'
+
         time_window = int(filename_prefix.split('t-')[0])
-        max_flow_len = int(filename_prefix.split('t-')[1].split('n-')[0])
-        model_name_string = model_filename.split(filename_prefix)[1].strip().split('.')[0].strip()
-        model = load_model(args.model)
+
+        max_flow_len = int(
+            filename_prefix.split('t-')[1].split('n-')[0]
+        )
+
+        model_name_string = (
+            model_filename
+            .split(filename_prefix)[1]
+            .strip()
+            .split('.')[0]
+            .strip()
+        )
+
+        model = load_model(args.model, compile=False)
 
         mins, maxs = static_min_max(time_window)
 
-        while (True):
-            samples = process_live_traffic(cap, args.dataset_type, labels, max_flow_len, traffic_type="all", time_window=time_window)
+    try:
+        while True:
+            samples = process_live_traffic(
+            cap,
+            args.dataset_type,
+            labels,
+            max_flow_len,
+            traffic_type="all",
+            time_window=time_window
+            )
+
             if len(samples) > 0:
-                X,Y_true,keys = dataset_to_list_of_fragments(samples)
-                X = np.array(normalize_and_padding(X, mins, maxs, max_flow_len))
+                X, Y_true, keys = dataset_to_list_of_fragments(samples)
+
+                X = np.array(
+                    normalize_and_padding(
+                        X,
+                        mins,
+                        maxs,
+                        max_flow_len
+                    )
+                )
+
                 if labels is not None:
                     Y_true = np.array(Y_true)
                 else:
                     Y_true = None
 
                 X = np.expand_dims(X, axis=3)
+
                 pt0 = time.time()
-                Y_pred = np.squeeze(model.predict(X, batch_size=2048) > 0.5,axis=1)
+
+                Y_pred = np.squeeze(
+                    model.predict(
+                        X,
+                        batch_size=2048
+                    ) > 0.5,
+                    axis=1
+                )
+
                 pt1 = time.time()
+
                 prediction_time = pt1 - pt0
 
                 [packets] = count_packets_in_dataset([X])
-                report_results(np.squeeze(Y_true), Y_pred, packets, model_name_string, data_source, prediction_time,predict_writer)
+
+                report_results(
+                    np.squeeze(Y_true),
+                    Y_pred,
+                    packets,
+                    model_name_string,
+                    data_source,
+                    prediction_time,
+                    predict_writer
+                )
+
                 predict_file.flush()
 
-            elif isinstance(cap, pyshark.FileCapture) == True:
+            elif isinstance(cap, pyshark.FileCapture):
                 print("\nNo more packets in file ", data_source)
                 break
 
-        predict_file.close()
+    finally:
+        try:
+            cap.close()
+        except Exception as e:
+            print("Error closing PyShark capture:", e)
+
+        try:
+            predict_file.close()
+        except Exception as e:
+            print("Error closing prediction file:", e)
 
 def report_results(Y_true, Y_pred, packets, model_name, data_source, prediction_time, writer):
     ddos_rate = '{:04.3f}'.format(sum(Y_pred) / Y_pred.shape[0])

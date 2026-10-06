@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from fastapi import UploadFile
+import time
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
 
@@ -49,9 +50,18 @@ async def save_pcap(file: UploadFile) -> Path:
 
 
 def delete_pcap(file_path: Path) -> None:
-    """
-    Delete a temporary PCAP after analysis.
-    """
+    if not file_path.exists():
+        return
 
-    if file_path.exists():
-        file_path.unlink()
+    max_attempts = 10
+
+    for attempt in range(max_attempts):
+        try:
+            file_path.unlink()
+            return
+
+        except PermissionError:
+            if attempt == max_attempts - 1:
+                raise
+
+            time.sleep(0.5)
