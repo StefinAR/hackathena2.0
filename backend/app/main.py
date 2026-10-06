@@ -11,9 +11,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 from app.routes.monitoring import router as monitoring_router
 
-app.include_router (monitoring_router)
+app.include_router(monitoring_router)
 
 # CORS
 # -------------------------------------------------------------------
@@ -24,6 +25,7 @@ app.add_middleware(
     # React development server
     allow_origins=[
         "http://localhost:3000",
+
         "http://localhost:5173",
     ],
 

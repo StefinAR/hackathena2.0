@@ -1,4 +1,6 @@
 import { useState } from "react";
+import axios from "axios";
+
 import { useDetections } from "../context/useDetection";
 
 import {
@@ -6,7 +8,7 @@ import {
   FileText,
   ShieldCheck,
   X,
-  Activity
+  Activity,
 } from "lucide-react";
 
 import "../styles/Analyze.css";
@@ -14,138 +16,270 @@ import "../styles/Analyze.css";
 function Analyze() {
   const { addDetection } = useDetections();
 
+  // ------------------------------------------------------------
+  // PCAP analysis state
+  // ------------------------------------------------------------
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
 
+  // ------------------------------------------------------------
+  // Domain monitoring state
+  // ------------------------------------------------------------
+
   const [domain, setDomain] = useState("");
   const [isCheckingDomain, setIsCheckingDomain] = useState(false);
   const [domainResult, setDomainResult] = useState(null);
+
+  // Backend currently accepts these file types
   const allowedExtensions = [
-  ".pcap",
-  ".pcapng",
-  ".csv",
-  ".json",
-];
+    ".pcap",
+    ".pcapng",
+    ".cap",
+  ];
 
-const isValidFileType = (file) => {
-  const fileName = file.name.toLowerCase();
+  // ------------------------------------------------------------
+  // Validate PCAP file
+  // ------------------------------------------------------------
 
-  return allowedExtensions.some((extension) =>
-    fileName.endsWith(extension)
-  );
-};
+  const isValidFileType = (file) => {
+    const fileName = file.name.toLowerCase();
+
+    return allowedExtensions.some((extension) =>
+      fileName.endsWith(extension)
+    );
+  };
+
+  // ------------------------------------------------------------
+  // Select PCAP
+  // ------------------------------------------------------------
 
   const handleFileChange = (event) => {
-  const file = event.target.files[0];
+    const file = event.target.files[0];
 
-  if (!file) return;
+    if (!file) return;
 
-  if (!isValidFileType(file)) {
-    setSelectedFile(null);
+    if (!isValidFileType(file)) {
+      setSelectedFile(null);
+      setIsAnalyzing(false);
+
+      setResult({
+        status: "Invalid File",
+        type: "Invalid",
+        message:
+          "Unsupported file type. Please select a PCAP, PCAPNG, or CAP file.",
+        source: "-",
+        destination: "-",
+        protocol: "-",
+      });
+
+      return;
+    }
+
+    setSelectedFile(file);
+    setResult(null);
     setIsAnalyzing(false);
+  };
 
-    setResult({
-      status: "Invalid File",
-      type: "Invalid",
-      message:
-        "Unsupported file type. Please select a PCAP, PCAPNG, CSV, or JSON file.",
-      source: "-",
-      destination: "-",
-      protocol: "-",
-    });
+  // ------------------------------------------------------------
+  // Remove selected PCAP
+  // ------------------------------------------------------------
 
-    return;
-  }
-
-  setSelectedFile(file);
-  setResult(null);
-  setIsAnalyzing(false);
-};
-
-   
   const handleRemoveFile = () => {
     setSelectedFile(null);
     setResult(null);
     setIsAnalyzing(false);
   };
-  const handleDomainCheck = () => {
-  if (!domain.trim() || isCheckingDomain) return;
 
-  const cleanDomain = domain
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "");
+  // ============================================================
+  // PCAP + LUCID ANALYSIS
+  // ============================================================
 
-  setIsCheckingDomain(true);
-  setDomainResult(null);
-
-  // Frontend-only simulation.
-  // Later this can be replaced with a backend ping/API.
-  setTimeout(() => {
-    const ping = Math.floor(Math.random() * 160) + 20;
-
-    const isHigh = ping >= 100;
-
-    setDomainResult({
-      domain: cleanDomain,
-      ping,
-      traffic: isHigh ? "HIGH" : "NORMAL",
-      status: isHigh ? "Suspicious" : "Normal",
-    });
-
-    setIsCheckingDomain(false);
-  }, 1200);
-};
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!selectedFile || isAnalyzing) return;
 
     setIsAnalyzing(true);
     setResult(null);
 
-    // Temporary frontend simulation.
-    // Backend API will replace this later.
-    setTimeout(() => {
-      const resultTypes = [
-        "Normal",
-        "Normal",
-        "Suspicious",
-        "Malicious",
-      ];
+    try {
+      // Create multipart form data
+      const formData = new FormData();
 
-      const detectedType =
-        resultTypes[
-          Math.floor(Math.random() * resultTypes.length)
-        ];
+      formData.append("file", selectedFile);
 
-      const source = "192.168.1.50";
-      const destination = "10.0.0.20";
-      const protocol = "TCP";
+      // Send PCAP to FastAPI
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/analysis/upload",
+        formData
+      );
+
+      console.log("PCAP analysis response:", response.data);
+
+      const data = response.data;
+      const lucidResult = data.result;
+
+      // ----------------------------------------------------------
+      // Validate backend response
+      // ----------------------------------------------------------
+
+      if (!data.success || !lucidResult) {
+        throw new Error(
+          "The backend did not return a valid LUCID result."
+        );
+      }
+
+      // ----------------------------------------------------------
+      // Values returned by LUCID
+      // ----------------------------------------------------------
+
+      const filename =
+        data.filename || selectedFile.name;
+
+      const ddosScore =
+        lucidResult["DDOS%"] ?? "N/A";
+
+      const packets =
+        lucidResult.Packets ?? "N/A";
+
+      const samples =
+        lucidResult.Samples ?? "N/A";
+
+      const processingTime =
+        lucidResult.Time ?? "N/A";
+
+      const model =
+        lucidResult.Model ?? "LUCID";
+
+      // ----------------------------------------------------------
+      // Add to existing detection history
+      //
+      // LUCID does not currently return source IP,
+      // destination IP, or protocol.
+      // Therefore we don't invent those values.
+      // ----------------------------------------------------------
 
       addDetection({
         date: new Date().toISOString().split("T")[0],
         time: new Date().toLocaleTimeString(),
-        source,
-        destination,
-        protocol,
-        type: detectedType,
+        source: "-",
+        destination: "-",
+        protocol: "-",
+        type: "LUCID Analysis",
       });
 
-      setIsAnalyzing(false);
+      // ----------------------------------------------------------
+      // Display result
+      // ----------------------------------------------------------
 
       setResult({
         status: "Analysis Complete",
-        type: detectedType,
-        source,
-        destination,
-        protocol,
-        message: `${detectedType} traffic detected during analysis.`,
+        type: "LUCID Analysis",
+
+        source: "-",
+        destination: "-",
+        protocol: "-",
+
+        message: `LUCID analysis completed for ${filename}.`,
+
+        filename,
+        model,
+        ddosScore,
+        packets,
+        samples,
+        processingTime,
+
+        accuracy: lucidResult.Accuracy ?? "N/A",
+        f1Score: lucidResult.F1Score ?? "N/A",
+        tpr: lucidResult.TPR ?? "N/A",
+        fpr: lucidResult.FPR ?? "N/A",
+        tnr: lucidResult.TNR ?? "N/A",
+        fnr: lucidResult.FNR ?? "N/A",
+
+        rawResult: lucidResult,
       });
-    }, 1500);
+    } catch (error) {
+      console.error("PCAP analysis failed:", error);
+
+      setResult({
+        status: "Analysis Failed",
+        type: "Error",
+        source: "-",
+        destination: "-",
+        protocol: "-",
+        message:
+          error.response?.data?.detail ||
+          error.message ||
+          "Unable to analyze the uploaded traffic file.",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
+
+  // ============================================================
+  // DOMAIN HEALTH MONITOR
+  // ============================================================
+
+  const handleDomainCheck = async () => {
+    if (!domain.trim() || isCheckingDomain) return;
+
+    let cleanDomain = domain.trim();
+
+    if (!/^https?:\/\//i.test(cleanDomain)) {
+      cleanDomain = `https://${cleanDomain}`;
+    }
+
+    setIsCheckingDomain(true);
+    setDomainResult(null);
+
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/monitor/start",
+        {
+          url: cleanDomain,
+        }
+      );
+
+      const data = response.data;
+
+      setDomainResult({
+        domain: data.target,
+        status: data.detection.status,
+        anomalyScore: data.detection.anomaly_score,
+        reasons: data.detection.reasons,
+        checks: data.checks,
+        metrics: data.metrics,
+      });
+    } catch (error) {
+      console.error("Domain monitoring failed:", error);
+
+      setDomainResult({
+        domain: cleanDomain,
+        status: "ERROR",
+        anomalyScore: null,
+        reasons: [
+          error.response?.data?.detail ||
+            "Unable to connect to the monitoring backend.",
+        ],
+        checks: [],
+        metrics: null,
+      });
+    } finally {
+      setIsCheckingDomain(false);
+    }
+  };
+
+  // ============================================================
+  // UI
+  // ============================================================
 
   return (
     <div className="analyze-page">
+
+      {/* ======================================================
+          PAGE HEADER
+      ====================================================== */}
 
       <div className="analyze-header">
         <div>
@@ -156,6 +290,10 @@ const isValidFileType = (file) => {
           </p>
         </div>
       </div>
+
+      {/* ======================================================
+          PCAP ANALYSIS CARD
+      ====================================================== */}
 
       <div className="analyze-card">
 
@@ -173,12 +311,14 @@ const isValidFileType = (file) => {
           </div>
         </div>
 
+        {/* Upload area */}
+
         <label className="upload-area">
 
           <input
             type="file"
             onChange={handleFileChange}
-            accept=".pcap,.pcapng,.csv,.json"
+            accept=".pcap,.pcapng,.cap"
           />
 
           <Upload size={38} />
@@ -197,17 +337,23 @@ const isValidFileType = (file) => {
 
         </label>
 
+        {/* Selected file */}
+
         {selectedFile && (
           <div className="selected-file">
 
             <FileText size={20} />
 
             <div className="selected-file-info">
-              <strong>{selectedFile.name}</strong>
+
+              <strong>
+                {selectedFile.name}
+              </strong>
 
               <span>
                 File selected and ready for analysis
               </span>
+
             </div>
 
             <button
@@ -222,110 +368,269 @@ const isValidFileType = (file) => {
           </div>
         )}
 
+        {/* Analyze button */}
+
         <button
           type="button"
           className="analyze-button"
           onClick={handleAnalyze}
           disabled={!selectedFile || isAnalyzing}
         >
+
           <ShieldCheck size={19} />
 
           {isAnalyzing
             ? "Analyzing..."
             : "Analyze Traffic"}
+
         </button>
-<div className="domain-check-card">
 
-  <div className="domain-check-header">
-    <div>
-      <h3>Domain Traffic Check</h3>
 
-      <p>
-        Check a domain and estimate its network traffic level.
-      </p>
-    </div>
+        {/* ==================================================
+            DOMAIN MONITOR
+        ================================================== */}
 
-    <div className="domain-check-icon">
-      <Activity size={22} />
-    </div>
-  </div>
+        <div className="domain-check-card">
 
-  <div className="domain-check-form">
+          <div className="domain-check-header">
 
-    <input
-      type="text"
-      placeholder="Enter domain name..."
-      value={domain}
-      onChange={(event) => setDomain(event.target.value)}
-    />
+            <div>
 
-    <button
-      type="button"
-      onClick={handleDomainCheck}
-      disabled={!domain.trim() || isCheckingDomain}
-    >
-      {isCheckingDomain ? "Checking..." : "Check Domain"}
-    </button>
+              <h3>Domain Health Monitor</h3>
 
-  </div>
+              <p>
+                Monitor a domain's availability,
+                response time, and service health.
+              </p>
 
-  {domainResult && (
-    <div
-      className={`domain-result ${
-        domainResult.status.toLowerCase()
-      }`}
-    >
+            </div>
 
-      <div className="domain-result-header">
-        <strong>{domainResult.domain}</strong>
+            <div className="domain-check-icon">
+              <Activity size={22} />
+            </div>
 
-        <span>
-          {domainResult.status}
-        </span>
-      </div>
+          </div>
 
-      <div className="domain-result-details">
 
-        <div>
-          <span>Ping</span>
-          <strong>{domainResult.ping} ms</strong>
+          <div className="domain-check-form">
+
+            <input
+              type="text"
+              placeholder="Enter domain name..."
+              value={domain}
+              onChange={(event) =>
+                setDomain(event.target.value)
+              }
+            />
+
+            <button
+              type="button"
+              onClick={handleDomainCheck}
+              disabled={
+                !domain.trim() ||
+                isCheckingDomain
+              }
+            >
+              {isCheckingDomain
+                ? "Checking..."
+                : "Check Domain"}
+            </button>
+
+          </div>
+
+
+          {/* Domain result */}
+
+          {domainResult && (
+            <div
+              className={`domain-result ${
+                domainResult.status?.toLowerCase() ||
+                "error"
+              }`}
+            >
+
+              <div className="domain-result-header">
+
+                <strong>
+                  {domainResult.domain}
+                </strong>
+
+                <span>
+                  {domainResult.status}
+                </span>
+
+              </div>
+
+
+              {domainResult.metrics && (
+                <div className="domain-result-details">
+
+                  <div>
+                    <span>
+                      Availability
+                    </span>
+
+                    <strong>
+                      {
+                        domainResult.metrics
+                          .availability_percent
+                      }%
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Avg Response
+                    </span>
+
+                    <strong>
+                      {
+                        domainResult.metrics
+                          .average_response_time_ms
+                      } ms
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      5xx Errors
+                    </span>
+
+                    <strong>
+                      {
+                        domainResult.metrics
+                          .error_5xx_rate_percent
+                      }%
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Timeouts
+                    </span>
+
+                    <strong>
+                      {
+                        domainResult.metrics
+                          .timeout_rate_percent
+                      }%
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Anomaly Score
+                    </span>
+
+                    <strong>
+                      {domainResult.anomalyScore}
+                    </strong>
+                  </div>
+
+                </div>
+              )}
+
+
+              {domainResult.reasons?.length > 0 && (
+                <div className="domain-result-reasons">
+
+                  <strong>
+                    Detection Reasons
+                  </strong>
+
+                  <ul>
+                    {domainResult.reasons.map(
+                      (reason, index) => (
+                        <li key={index}>
+                          {reason}
+                        </li>
+                      )
+                    )}
+                  </ul>
+
+                </div>
+              )}
+
+
+              {domainResult.checks?.length > 0 && (
+                <div className="domain-checks">
+
+                  <strong>
+                    Monitoring Checks
+                  </strong>
+
+                  {domainResult.checks.map(
+                    (check) => (
+                      <div
+                        className="domain-check-row"
+                        key={check.check_number}
+                      >
+
+                        <span>
+                          Check {check.check_number}
+                        </span>
+
+                        <span>
+                          HTTP{" "}
+                          {check.status_code ?? "ERROR"}
+                        </span>
+
+                        <span>
+                          {check.response_time_ms} ms
+                        </span>
+
+                        <span>
+                          {check.available
+                            ? "Available"
+                            : "Unavailable"}
+                        </span>
+
+                      </div>
+                    )
+                  )}
+
+                </div>
+              )}
+
+
+              <p className="domain-result-note">
+                This result is based on black-box
+                service monitoring. It measures
+                observable response behavior and does
+                not directly measure the target
+                server's total network traffic.
+              </p>
+
+            </div>
+          )}
+
         </div>
 
-        <div>
-          <span>Traffic Level</span>
-          <strong>{domainResult.traffic}</strong>
-        </div>
-
-        <div>
-          <span>Classification</span>
-          <strong>{domainResult.status}</strong>
-        </div>
-
       </div>
 
-      <p className="domain-result-note">
-        This is an approximate classification based on network
-        response measurements. Ping alone cannot accurately
-        determine whether traffic is malicious.
-      </p>
 
-    </div>
-  )}
-
-</div>
-      </div>
+      {/* ======================================================
+          RESULT CARD
+      ====================================================== */}
 
       <div className="result-card">
 
         <div className="result-header">
+
           <div>
+
             <h3>Analysis Result</h3>
 
             <p>
               Security analysis results will appear here.
             </p>
+
           </div>
+
         </div>
+
+
+        {/* Empty state */}
 
         {!result && (
           <div className="empty-result">
@@ -347,47 +652,128 @@ const isValidFileType = (file) => {
           </div>
         )}
 
+
+        {/* ==================================================
+            LUCID RESULT
+        ================================================== */}
+
         {result && (
-  <div
-    className={`analysis-success ${
-      result.type === "Invalid"
-        ? "invalid"
-        : result.type.toLowerCase()
-    }`}
-  >
+          <div
+            className={`analysis-success ${
+              result.type === "Error" ||
+              result.type === "Invalid"
+                ? "invalid"
+                : "normal"
+            }`}
+          >
+
             <div className="success-icon">
               <ShieldCheck size={24} />
             </div>
 
+
             <div className="analysis-result-content">
 
-              <strong>{result.status}</strong>
+              <strong>
+                {result.status}
+              </strong>
 
-              <p>{result.message}</p>
+              <p>
+                {result.message}
+              </p>
 
-              <div className="analysis-details">
 
-                <div>
-                  <span>Type</span>
-                  <strong>{result.type}</strong>
+              {/* LUCID information */}
+
+              {result.rawResult && (
+                <div className="analysis-details">
+
+                  <div>
+                    <span>Model</span>
+                    <strong>
+                      {result.model}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>PCAP</span>
+                    <strong>
+                      {result.filename}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>DDoS %</span>
+                    <strong>
+                      {result.ddosScore}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Packets</span>
+                    <strong>
+                      {result.packets}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Samples</span>
+                    <strong>
+                      {result.samples}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Processing Time</span>
+                    <strong>
+                      {result.processingTime}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Accuracy</span>
+                    <strong>
+                      {result.accuracy}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>F1 Score</span>
+                    <strong>
+                      {result.f1Score}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>TPR</span>
+                    <strong>
+                      {result.tpr}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>FPR</span>
+                    <strong>
+                      {result.fpr}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>TNR</span>
+                    <strong>
+                      {result.tnr}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>FNR</span>
+                    <strong>
+                      {result.fnr}
+                    </strong>
+                  </div>
+
                 </div>
-
-                <div>
-                  <span>Source</span>
-                  <strong>{result.source}</strong>
-                </div>
-
-                <div>
-                  <span>Destination</span>
-                  <strong>{result.destination}</strong>
-                </div>
-
-                <div>
-                  <span>Protocol</span>
-                  <strong>{result.protocol}</strong>
-                </div>
-
-              </div>
+              )}
 
             </div>
 

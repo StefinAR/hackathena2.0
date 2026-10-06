@@ -1,5 +1,7 @@
 # backend/app/services/lucid_service.py
 
+
+import sys
 import subprocess
 from pathlib import Path
 
@@ -49,8 +51,9 @@ def run_lucid(pcap_path: Path) -> dict:
             f"Model not found at: {MODEL_PATH}"
         )
 
+
     command = [
-        "python",
+        "sys.executable,",
         str(LUCID_SCRIPT),
         "--predict_live",
         str(pcap_path),
