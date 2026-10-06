@@ -84,15 +84,40 @@ const isValidFileType = (file) => {
 
       const analysis = data.result;
 
-      const detectedType = analysis.status;
+      let detectedType;
+
+      switch (analysis.status.toLowerCase()) {
+        case "normal":
+          detectedType = "Normal";
+          break;
+
+        case "suspicious":
+          detectedType = "Suspicious";
+          break;
+
+        case "ddos_attack":
+          detectedType = "Malicious";
+          break;
+
+        default:
+          detectedType = "Malicious";
+          break;
+      }
 
       addDetection({
+        id: Date.now(),
+
         date: new Date().toISOString().split("T")[0],
         time: new Date().toLocaleTimeString(),
-        source: "-",
-        destination: "-",
-        protocol: "-",
+
+        filename: selectedFile.name,
+
         type: detectedType,
+
+        ddosPercentage: analysis.ddos_percentage ?? 0,
+        packets: analysis.packets ?? 0,
+        samples: analysis.samples ?? 0,
+        windows: analysis.windows ?? 0,
       });
 
       setResult({
@@ -280,7 +305,9 @@ const isValidFileType = (file) => {
 
             <div className="analysis-result-content">
 
-              <strong>{result.status}</strong>
+              <strong className="analysis-status">
+                {result.status}
+              </strong>
 
               <p>{result.message}</p>
 
@@ -288,7 +315,9 @@ const isValidFileType = (file) => {
 
                 <div>
                   <span>Status</span>
-                  <strong>{result.type}</strong>
+                  <strong className={`traffic-status ${result.type.toLowerCase()}`}>
+                    {result.type}
+                  </strong>
                 </div>
 
                 <div>
