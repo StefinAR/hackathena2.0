@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Python
 __pycache__/
 *.pyc
@@ -24,7 +24,7 @@ dist/
 
 # Logs
 *.log
-=======
+
 # Python virtual environment
 venv/
 .venv/

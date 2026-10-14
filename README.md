@@ -2,10 +2,10 @@
   <img src="https://github.com/Runa8147/Hackathena_Readme_Template/blob/d0add823684f0ac28b76a99636c729f80b0ca8ff/hackathena_banner.png" alt="Hackathena '26 2.0" width="100%">
 </p>
 
-<h1 align="center">[PROJECT NAME]</h1>
+<h1 align="center">NETSHIELD</h1>
 
 <p align="center">
-  <strong>[One-line description of your solution]</strong>
+  <strong>AI-powered independent security monitoring for detecting suspicious network activity and DDoS attacks at the domain level.</strong>
 </p>
 
 <p align="center">
@@ -20,278 +20,94 @@
 
 **Team Name:** `Belmont`
 
-| Member     | Role      | Institution |
+| Member | Role | Institution |
 | ---------- | --------- | ----------- |
-| STEFIN A R | Team Lead | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
-| JEWEL ABRAHAM BIJU | Member | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
-| AADI ROBIN JOSEPH  | Member    | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
-| LEWIN JOSHY | Member    | MAHARAJAS TECHNOLOGICAL INSTITUTE,THRISSUR   |
+| STEFIN A R | Team Lead | MAHARAJAS TECHNOLOGICAL INSTITUTE, THRISSUR |
+| JEWEL ABRAHAM BIJU | Member | MAHARAJAS TECHNOLOGICAL INSTITUTE, THRISSUR |
+| AADI ROBIN JOSEPH | Member | MAHARAJAS TECHNOLOGICAL INSTITUTE, THRISSUR |
+| LEWIN JOSHY | Member | MAHARAJAS TECHNOLOGICAL INSTITUTE, THRISSUR |
 
 ---
 
 ## 🎯 Problem Statement
 
-The rapid advancement of generative AI has made it increasingly difficult to distinguish authentic content from artificially generated or manipulated content.
+The rapid evolution of artificial intelligence is changing the cybersecurity landscape. AI can assist attackers in generating, scaling, and adapting malicious activity, making suspicious network behavior increasingly difficult to identify using simple rule-based observation.
 
-Deepfakes, cloned voices, synthetic images, fabricated documents, and other AI-assisted techniques can enable **impersonation, misinformation, identity theft, financial fraud, and social engineering attacks**.
+Hosting providers and server platforms already implement infrastructure-level security mechanisms. However, domain owners, especially small businesses and users without dedicated cybersecurity teams, may have limited visibility into what is happening specifically to their domain.
 
-**[Describe the specific fraud/problem your project addresses in 2–3 concise sentences.]**
+A website becoming slow or unavailable does not immediately tell the owner whether the cause is legitimate traffic, a technical problem, or a potential cyberattack.
+
+NetShield addresses this visibility gap by providing an independent security monitoring and analysis layer that helps domain owners detect suspicious network behavior, understand the associated risk, and take informed action.
+
+### The Core Problem
+
+- AI-assisted cyberattacks are becoming increasingly scalable and adaptable.
+- DDoS and abnormal traffic can disrupt website availability.
+- Domain owners may not have sufficient security visibility.
+- Website anomalies can be difficult to distinguish from legitimate traffic or technical issues.
+- Small organizations may not have dedicated cybersecurity teams.
+- Detection without understandable alerts provides limited practical value.
+- Users need security intelligence that helps them understand **what happened, why it matters, and what to investigate next**.
 
 ---
 
 ## 💡 Solution
 
-### [PROJECT NAME]
+# NetShield
 
-**[Project Name]** is a **[web/mobile/desktop/API]** solution designed to detect and/or prevent **[specific type of AI-based fraud]**.
+**NetShield** is an independent domain-level security monitoring and detection solution designed to complement existing hosting and server security.
 
-The system takes **[input]**, analyzes it using **[AI/ML/algorithm/verification mechanism]**, and produces **[detection result/risk score/authenticity assessment/alert]** to help users identify potentially fraudulent content.
+Instead of replacing the security mechanisms provided by hosting providers, NetShield adds an additional visibility and intelligence layer for the domain owner.
+
+The current prototype accepts **PCAP network traffic data**, extracts relevant network features, and analyzes the traffic using the **LUCID deep-learning model** to detect DDoS-related activity.
+
+NetShield also incorporates distributed monitoring, where multiple monitoring points observe domain behavior. These observations can be correlated with AI-based detection results to identify suspicious activity and generate a security alert.
 
 ### Key Features
 
-* 🔴 **[Feature 1]** — [Short description]
-* ⚪ **[Feature 2]** — [Short description]
-* ⚫ **[Feature 3]** — [Short description]
-* 🔴 **[Feature 4]** — [Short description]
-* ⚪ **[Feature 5]** — [Short description]
+- 🔴 **AI-Based DDoS Detection**  
+  Uses the LUCID deep-learning model to analyze network traffic and identify DDoS-related activity.
+
+- ⚪ **PCAP-Based Network Analysis**  
+  Allows network traffic captured in PCAP format to be analyzed for suspicious behavior.
+
+- ⚫ **Distributed Monitoring**  
+  Uses multiple monitoring points to observe domain behavior independently.
+
+- ⚪ **Risk-Based Alerts**  
+  Converts detected suspicious activity into understandable security alerts and risk information.
+
+- ⚫ **Actionable Security Reports**  
+  Provides evidence and information that can help the domain owner investigate and respond.
+
+- 🔴 **Independent Security Visibility**  
+  Works alongside existing hosting and infrastructure security instead of attempting to replace it.
+
+### Core Concept
+
+> **Your hosting provider protects the infrastructure. NetShield helps you understand what is happening to your domain.**
 
 ---
 
 ## 🔄 How It Works
 
 ```text
-      provide architectural diagram here
-```
-
-![System Architecture](ARCHITECTURE_IMAGE_URL)
-
-*System architecture and processing workflow.*
-
----
-
-## 🛠️ Technology Stack
-
-### Software
-
-| Layer          | Technologies                             |
-| -------------- | ---------------------------------------- |
-| **Frontend**   | [React / Next.js / HTML / CSS / etc.]    |
-| **Backend**    | [FastAPI / Flask / Node.js / etc.]       |
-| **AI / ML**    | [Model / Framework / API]                |
-| **Database**   | [PostgreSQL / MongoDB / Firebase / etc.] |
-| **Processing** | [OpenCV / NumPy / etc.]                  |
-| **Deployment** | [Vercel / Render / Railway / etc.]       |
-
-### Tools
-
-* Git & GitHub
-* [Development Tool]
-* [API / AI Service]
-* [Other Tools]
-
----
-
-## 📸 Project Preview
-
-### Main Interface
-
-![Main Interface](SCREENSHOT_1_URL)
-
-*Main interface of the application.*
-
-### Detection / Analysis
-
-![Detection](SCREENSHOT_2_URL)
-
-*AI fraud detection and analysis workflow.*
-
-### Results
-
-![Results](SCREENSHOT_3_URL)
-
-*Detection result, risk assessment, and supporting information.*
-
----
-
-## 📊 Results
-
-| Metric                 | Result                                      |
-| ---------------------- | ------------------------------------------- |
-| **Detection Accuracy** | [XX%]                                       |
-| **Precision**          | [XX%]                                       |
-| **Recall**             | [XX%]                                       |
-| **Response Time**      | [XX seconds]                                |
-| **Supported Input**    | [Images / Audio / Video / Documents / etc.] |
-
-> **Note:** Replace the above values with measured results from the final prototype. Remove metrics that are not applicable.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-* [Python 3.x / Node.js / etc.]
-* [Required API keys]
-* [Other dependencies]
-
-### Installation
-
-```bash
-git clone [REPOSITORY_URL]
-cd [PROJECT_DIRECTORY]
-
-[INSTALL_COMMAND]
-```
-
-### Environment Variables
-
-Create a `.env` file:
-
-```env
-[VARIABLE_NAME]=[VALUE]
-[API_KEY]=[YOUR_API_KEY]
-```
-
-### Run
-
-```bash
-[RUN_COMMAND]
-```
-
-The application will be available at:
-
-```text
-[LOCALHOST / DEPLOYMENT URL]
-```
-
----
-
-## 🎥 Demo
-
-### Live Demo
-
-**[LIVE DEMO URL]**
-
-### Demo Video
-
-**[DEMO VIDEO URL]**
-
-> The demo demonstrates the complete workflow from input submission to fraud detection, analysis, and final result.
-
----
-
-## 🧪 Example
-
-**Input**
-
-```text
-[Example input provided to the system]
-```
-
-**System Analysis**
-
-```text
-[Brief representation of the analysis]
-```
-
-**Result**
-
-```text
-[AUTHENTIC / SUSPICIOUS / AI-GENERATED / FRAUDULENT]
-Confidence: [XX%]
-Risk Level: [LOW / MEDIUM / HIGH]
-```
-
----
-
-## 🔐 Security & Privacy
-
-The system is designed with user privacy and responsible AI usage in mind.
-
-* [No permanent storage of uploaded content]
-* [Secure processing]
-* [Minimal collection of user data]
-* [API credentials stored through environment variables]
-* [Other relevant privacy measure]
-
-> Replace the above points with the actual privacy and security mechanisms implemented in the project.
-
----
-
-## 🔮 Future Scope
-
-* [ ] Improve detection accuracy with larger and more diverse datasets
-* [ ] Support additional types of AI-generated content
-* [ ] Add real-time detection capabilities
-* [ ] Improve explainability of detection results
-* [ ] Deploy scalable inference infrastructure
-* [ ] Integrate with [relevant platform/system]
-* [ ] Add [future feature]
-
----
-
-## 👨‍💻 Team Contributions
-
-* **[Member 1]** — [Architecture / AI model / Backend / etc.]
-* **[Member 2]** — [Frontend / UI / Integration / etc.]
-* **[Member 3]** — [Dataset / ML / Testing / etc.]
-* **[Member 4]** — [Research / Documentation / Deployment / etc.]
-
----
-
-## 🏆 Hackathena '26 2.0
-
-This project was developed as part of **Hackathena '26 2.0**, organized by the **Department of Computer Science & Engineering and CESA, Jyothi Engineering College**.
-
-### Theme
-
-> **Detection and Prevention of AI-Based Frauds**
-
-The project focuses on addressing emerging forms of fraud enabled or amplified by generative artificial intelligence, including **deepfakes, cloned voices, synthetic media, fabricated documents, and AI-assisted impersonation**.
-
----
-
-## 📄 Repository Structure
-
-```text
-.
-├── frontend/              # Frontend application
-├── backend/               # Backend services
-├── models/                # AI/ML models
-├── data/                  # Datasets / sample data
-├── docs/                  # Documentation
-├── screenshots/           # Project screenshots
-├── .env.example           # Environment variables template
-├── requirements.txt       # Python dependencies
-├── package.json           # Node dependencies
-└── README.md
-```
-
----
-
-## 📬 Contact
-
-For questions, collaboration, or further information:
-
-**Team:** [TEAM NAME]
-**Team Lead:** [NAME]
-**Email:** [EMAIL]
-**GitHub:** [GITHUB REPOSITORY]
-
----
-
-<p align="center">
-
-<strong>Hackathena '26 2.0</strong>
-
-<br>
-
-Detection & Prevention of AI-Based Frauds
-
-<br><br>
-
-<img src="https://img.shields.io/badge/Built%20at-Jyothi%20Engineering%20College-black?style=flat-square">
-<img src="https://img.shields.io/badge/Hackathena-2026-red?style=flat-square">
-
-</p>
+                    DOMAIN
+                       │
+                       ▼
+              DOMAIN MONITORING
+                       │
+                       ▼
+             PCAP & DATA COLLECTION
+                       │
+                       ▼
+          FEATURE EXTRACTION & LUCID
+                       │
+                       ▼
+                    DETECTION 
+                       │
+                       ▼
+            RISK ASSESSMENT & ALERT
+                       │
+                       ▼
+                 USER ACTION
